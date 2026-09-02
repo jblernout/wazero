@@ -1028,3 +1028,6 @@ func TestModuleInstance_applyElements(t *testing.T) {
 			m.Tables[0].References)
 	})
 }
+
+func (e *mockEngine) HasCompiledModule(*Module) bool { return false }
+func (e *mockEngine) KeepsFunctionBodies() bool      { return true }

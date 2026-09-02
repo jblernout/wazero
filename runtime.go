@@ -235,7 +235,25 @@ func (r *runtime) CompileModule(ctx context.Context, binary []byte) (CompiledMod
 		r.memoryLimitPages, r.memoryCapacityFromMax, !r.dwarfDisabled, r.storeCustomSections)
 	if err != nil {
 		return nil, err
-	} else if err = internal.Validate(r.enabledFeatures); err != nil {
+	}
+
+	listeners, err := buildFunctionListeners(ctx, internal)
+	if err != nil {
+		return nil, err
+	}
+	internal.AssignModuleID(binary, listeners, r.ensureTermination)
+
+	// botify: function-body validation is the bulk of Validate (0.3 s for a
+	// 100 MB module) and a module already in the compilation cache (in memory
+	// or on disk, keyed by the binary's hash) was validated when it was
+	// compiled. Everything else in Validate still runs: it has side effects
+	// the engine relies on (cached type sizes).
+	if r.store.Engine.HasCompiledModule(internal) {
+		err = internal.ValidateExceptFunctionBodies(r.enabledFeatures)
+	} else {
+		err = internal.Validate(r.enabledFeatures)
+	}
+	if err != nil {
 		// TODO: decoders should validate before returning, as that allows
 		// them to err with the correct position in the wasm binary.
 		return nil, err
@@ -254,13 +272,15 @@ func (r *runtime) CompileModule(ctx context.Context, binary []byte) (CompiledMod
 	}
 	c.typeIDs = typeIDs
 
-	listeners, err := buildFunctionListeners(ctx, internal)
-	if err != nil {
-		return nil, err
-	}
-	internal.AssignModuleID(binary, listeners, r.ensureTermination)
 	if err = r.store.Engine.CompileModule(ctx, internal, listeners, r.ensureTermination); err != nil {
 		return nil, err
+	}
+	// botify: the compiler keeps its own machine code; the decoded function
+	// bodies (58 MB for the WebKit module) are dead weight from here on.
+	if !r.store.Engine.KeepsFunctionBodies() {
+		for i := range internal.CodeSection {
+			internal.CodeSection[i].Body = nil
+		}
 	}
 	return c, nil
 }

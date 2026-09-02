@@ -841,3 +841,6 @@ func TestNewRuntime_concurrent(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func (e *mockEngine) HasCompiledModule(*wasm.Module) bool { return false }
+func (e *mockEngine) KeepsFunctionBodies() bool           { return true }

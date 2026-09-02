@@ -279,6 +279,16 @@ func (m *Module) typeIndexOfFunction(funcIdx Index) (Index, bool) {
 }
 
 func (m *Module) Validate(enabledFeatures api.CoreFeatures) error {
+	return m.validate(enabledFeatures, true)
+}
+
+// ValidateExceptFunctionBodies is Validate without the per-function body
+// validation, for modules whose compiled code is already cached (botify).
+func (m *Module) ValidateExceptFunctionBodies(enabledFeatures api.CoreFeatures) error {
+	return m.validate(enabledFeatures, false)
+}
+
+func (m *Module) validate(enabledFeatures api.CoreFeatures, functionBodies bool) error {
 	for i := range m.TypeSection {
 		tp := &m.TypeSection[i]
 		tp.CacheNumInUint64()
@@ -317,7 +327,7 @@ func (m *Module) Validate(enabledFeatures api.CoreFeatures) error {
 		return err
 	}
 
-	if m.CodeSection != nil {
+	if m.CodeSection != nil && functionBodies {
 		if err = m.validateFunctions(enabledFeatures, functions, globals, memory, tables, tags, MaximumFunctionIndex); err != nil {
 			return err
 		}

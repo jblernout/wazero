@@ -55,6 +55,13 @@ func (e *engine) Close() (err error) {
 	return
 }
 
+// HasCompiledModule implements wasm.Engine (botify): the interpreter never
+// has a cache worth skipping validation for.
+func (e *engine) HasCompiledModule(*wasm.Module) bool { return false }
+
+// KeepsFunctionBodies implements wasm.Engine (botify).
+func (e *engine) KeepsFunctionBodies() bool { return true }
+
 // CompiledModuleCount implements the same method as documented on wasm.Engine.
 func (e *engine) CompiledModuleCount() uint32 {
 	e.mux.Lock()

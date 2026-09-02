@@ -652,6 +652,25 @@ func (e *engine) Close() (err error) {
 	return nil
 }
 
+// HasCompiledModule implements wasm.Engine (botify).
+func (e *engine) HasCompiledModule(m *wasm.Module) bool {
+	if _, ok := e.getCompiledModuleFromMemory(m, false); ok {
+		return true
+	}
+	if e.fileCache == nil || m.IsHostModule {
+		return false
+	}
+	cached, hit, err := e.fileCache.Get(fileCacheKey(m))
+	if !hit || err != nil {
+		return false
+	}
+	_ = cached.Close()
+	return true
+}
+
+// KeepsFunctionBodies implements wasm.Engine (botify).
+func (e *engine) KeepsFunctionBodies() bool { return false }
+
 // CompiledModuleCount implements wasm.Engine.
 func (e *engine) CompiledModuleCount() uint32 {
 	e.mux.RLock()

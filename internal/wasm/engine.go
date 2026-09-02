@@ -24,6 +24,16 @@ type Engine interface {
 	// module instances have outstanding calls.
 	DeleteCompiledModule(module *Module)
 
+	// HasCompiledModule reports whether the module (by its ID) is already
+	// compiled, in memory or in the compilation cache. botify addition: lets
+	// the runtime skip function-body validation for cached modules.
+	HasCompiledModule(module *Module) bool
+
+	// KeepsFunctionBodies reports whether the engine reads Code.Body after
+	// CompileModule (the interpreter does, the compiler does not). botify
+	// addition: the runtime drops the bodies otherwise.
+	KeepsFunctionBodies() bool
+
 	// NewModuleEngine compiles down the function instances in a module, and returns ModuleEngine for the module.
 	//
 	// * module is the source module from which moduleFunctions are instantiated. This is used for caching.
