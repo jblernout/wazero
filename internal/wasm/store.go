@@ -273,7 +273,12 @@ func (m *ModuleInstance) applyData(data []DataSegment) error {
 	m.DataInstances = make([][]byte, len(data))
 	for i := range data {
 		d := &data[i]
-		m.DataInstances[i] = d.Init
+		// botify: an active segment is dropped once applied (spec: it behaves
+		// as if data.drop ran after instantiation), so do not keep it alive;
+		// a later memory.init on it traps on the empty instance as required.
+		if d.IsPassive() {
+			m.DataInstances[i] = d.Init
+		}
 		if !d.IsPassive() {
 			offsetExprResults := evaluateConstExprInModuleInstance(&d.OffsetExpression, m)
 			offset := int(offsetExprResults[0])
