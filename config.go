@@ -378,6 +378,17 @@ func (c *compiledModule) Name() (moduleName string) {
 }
 
 // Close implements CompiledModule.Close
+// DropDataSegments releases the module's data segments (botify addition).
+// Only valid once every instance that needs them has been created: the
+// segments are applied at instantiation (active) or referenced by the
+// instance (passive), so a single-instance engine can free them — 42 MB for
+// the WebKit module — right after instantiating.
+func (c *compiledModule) DropDataSegments() {
+	if c.module != nil {
+		c.module.DataSection = nil
+	}
+}
+
 func (c *compiledModule) Close(context.Context) error {
 	c.compiledEngine.DeleteCompiledModule(c.module)
 	// It is possible the underlying may need to return an error later, but in any case this matches api.Module.Close.
