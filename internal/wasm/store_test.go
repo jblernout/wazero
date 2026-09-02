@@ -943,7 +943,8 @@ func TestModuleInstance_applyData(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, []byte{0xa, 0xf, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x5}, m.MemoryInstance.Buffer)
-		require.Equal(t, [][]byte{{0xa, 0xf}, {0x1, 0x5}}, m.DataInstances)
+		// active segments are dropped once applied (botify)
+		require.Equal(t, [][]byte{nil, nil}, m.DataInstances)
 	})
 	t.Run("error", func(t *testing.T) {
 		m := &ModuleInstance{MemoryInstance: &MemoryInstance{Buffer: make([]byte, 5)}}
