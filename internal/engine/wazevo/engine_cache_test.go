@@ -20,6 +20,12 @@ func crcf(b []byte) []byte {
 	return u32.LeBytes(c)
 }
 
+// pad is the alignment padding before the executable of a module with n
+// functions (see executableFilePadding).
+func pad(n int) []byte {
+	return make([]byte, executableFilePadding(len(magic)+1+len(testVersion)+4+8*n+8))
+}
+
 func TestSerializeCompiledModule(t *testing.T) {
 	tests := []struct {
 		in  *compiledModule
@@ -37,6 +43,7 @@ func TestSerializeCompiledModule(t *testing.T) {
 				u32.LeBytes(1),              // number of functions.
 				u64.LeBytes(0),              // offset.
 				u64.LeBytes(5),              // length of code.
+				pad(1),                      // alignment padding.
 				[]byte{1, 2, 3, 4, 5},       // code.
 				crcf([]byte{1, 2, 3, 4, 5}), // crc for the code.
 				[]byte{0},                   // no source map.
@@ -55,6 +62,7 @@ func TestSerializeCompiledModule(t *testing.T) {
 				u32.LeBytes(1),              // number of functions.
 				u64.LeBytes(0),              // offset.
 				u64.LeBytes(5),              // length of code.
+				pad(1),                      // alignment padding.
 				[]byte{1, 2, 3, 4, 5},       // code.
 				crcf([]byte{1, 2, 3, 4, 5}), // crc for the code.
 				[]byte{0},                   // no source map.
@@ -77,6 +85,7 @@ func TestSerializeCompiledModule(t *testing.T) {
 				u64.LeBytes(5), // offset.
 				// Executable.
 				u64.LeBytes(8),                       // length of code.
+				pad(2),                               // alignment padding.
 				[]byte{1, 2, 3, 4, 5, 1, 2, 3},       // code.
 				crcf([]byte{1, 2, 3, 4, 5, 1, 2, 3}), // crc for the code.
 				[]byte{0},                            // no source map.
@@ -121,7 +130,7 @@ func TestDeserializeCompiledModule(t *testing.T) {
 				[]byte(testVersion),
 				u32.LeBytes(1), // number of functions.
 			),
-			expErr: "compilationcache: invalid magic number: got WAZEVO but want abcdef",
+			expErr: "compilationcache: invalid magic number: got WAZEVF but want abcdef",
 		},
 		{
 			name: "version mismatch",
@@ -153,6 +162,7 @@ func TestDeserializeCompiledModule(t *testing.T) {
 				u64.LeBytes(0), // offset.
 				// Executable.
 				u64.LeBytes(5),              // size.
+				pad(1),                      // alignment padding.
 				[]byte{1, 2, 3, 4, 5},       // machine code.
 				crcf([]byte{1, 2, 3, 4, 5}), // machine code.
 				[]byte{0},                   // no source map.
@@ -177,8 +187,9 @@ func TestDeserializeCompiledModule(t *testing.T) {
 				// Function index = 1.
 				u64.LeBytes(7), // offset.
 				// Executable.
-				u64.LeBytes(10),                             // size.
-				[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},       // machine code.
+				u64.LeBytes(10),                       // size.
+				pad(2),                                // alignment padding.
+				[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, // machine code.
 				crcf([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}), // crc for machine code.
 				[]byte{0},      // no source map.
 				u32.LeBytes(0), // empty catch clause table.
@@ -201,6 +212,7 @@ func TestDeserializeCompiledModule(t *testing.T) {
 				u64.LeBytes(0), // offset.
 				// Executable.
 				u64.LeBytes(5),              // size.
+				pad(1),                      // alignment padding.
 				[]byte{1, 2, 3, 4, 5},       // machine code.
 				crcf([]byte{1, 2, 3, 4, 5}), // machine code.
 				[]byte{0},                   // no source map.
@@ -234,6 +246,7 @@ func TestDeserializeCompiledModule(t *testing.T) {
 				u64.LeBytes(5), // offset.
 				// Executable.
 				u64.LeBytes(5), // size of the executable.
+				pad(2),         // alignment padding.
 				// Lack of machine code here.
 			),
 			expErr: "compilationcache: error reading executable (len=5): EOF",
@@ -248,6 +261,7 @@ func TestDeserializeCompiledModule(t *testing.T) {
 				u64.LeBytes(0), // offset.
 				// Executable.
 				u64.LeBytes(5),        // size.
+				pad(1),                // alignment padding.
 				[]byte{1, 2, 3, 4, 5}, // machine code.
 				[]byte{1, 2, 3, 4},    // crc for machine code.
 			),
@@ -268,6 +282,7 @@ func TestDeserializeCompiledModule(t *testing.T) {
 				u64.LeBytes(0), // offset.
 				// Executable.
 				u64.LeBytes(5),        // size.
+				pad(1),                // alignment padding.
 				[]byte{1, 2, 3, 4, 5}, // machine code.
 			),
 			expCompiledModule: &compiledModule{
@@ -287,6 +302,7 @@ func TestDeserializeCompiledModule(t *testing.T) {
 				u64.LeBytes(0), // offset.
 				// Executable.
 				u64.LeBytes(5),              // size.
+				pad(1),                      // alignment padding.
 				[]byte{1, 2, 3, 4, 5},       // machine code.
 				crcf([]byte{1, 2, 3, 4, 5}), // crc for machine code.
 			),

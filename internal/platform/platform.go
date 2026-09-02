@@ -2,7 +2,10 @@
 package platform
 
 import (
+	"os"
 	"runtime"
+	"sync"
+	"unsafe"
 
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/experimental"
@@ -53,7 +56,61 @@ func MunmapCodeSegment(code []byte) error {
 	if len(code) == 0 {
 		panic("BUG: MunmapCodeSegment with zero length")
 	}
+	if unmapFileCodeSegment(code) {
+		return nil
+	}
 	return munmapCodeSegment(code)
+}
+
+// fileMapped records the executable segments mapped from files, so that
+// MunmapCodeSegment releases them the right way.
+var (
+	fileMappedMu sync.Mutex
+	fileMapped   = map[uintptr]int{}
+)
+
+func rememberFileMapped(b []byte) {
+	fileMappedMu.Lock()
+	fileMapped[uintptr(unsafe.Pointer(&b[0]))] = len(b)
+	fileMappedMu.Unlock()
+}
+
+func unmapFileCodeSegment(code []byte) bool {
+	addr := uintptr(unsafe.Pointer(&code[0]))
+	fileMappedMu.Lock()
+	n, ok := fileMapped[addr]
+	if ok {
+		delete(fileMapped, addr)
+	}
+	fileMappedMu.Unlock()
+	if !ok {
+		return false
+	}
+	if err := munmapFileCodeSegment(code[:n]); err != nil {
+		panic(err)
+	}
+	return true
+}
+
+// FileMappedCodeSupported reports whether MmapFileCodeSegment works here.
+// WAZERO_NO_FILE_MAPPED_CODE=1 forces the copying path (A/B measurements).
+func FileMappedCodeSupported() bool {
+	return fileMappedCodeSupported && os.Getenv("WAZERO_NO_FILE_MAPPED_CODE") == ""
+}
+
+// MmapFileCodeSegment maps size bytes of f starting at off (a multiple of
+// 64 KiB) as read-only executable memory, privately. The pages are demand
+// loaded and shared with other processes mapping the same file.
+func MmapFileCodeSegment(f *os.File, off int64, size int) ([]byte, error) {
+	if size == 0 {
+		panic("BUG: MmapFileCodeSegment with zero length")
+	}
+	b, err := mmapFileCodeSegment(f, off, size)
+	if err != nil {
+		return nil, err
+	}
+	rememberFileMapped(b)
+	return b, nil
 }
 
 func executableMmapSupported() bool {
