@@ -347,6 +347,10 @@ func (b *hostModuleBuilder) Compile(ctx context.Context) (CompiledModule, error)
 // hostModuleInstance is a wrapper around api.Module that prevents calling ExportedFunction.
 type hostModuleInstance struct{ api.Module }
 
+// UnwrapModule returns the underlying module instance so an ImportResolver
+// may hand out host modules (botify addition; see wasm.resolveImports).
+func (h hostModuleInstance) UnwrapModule() api.Module { return h.Module }
+
 // ExportedFunction implements api.Module ExportedFunction.
 func (h hostModuleInstance) ExportedFunction(name string) api.Function {
 	panic("calling ExportedFunction is forbidden on host modules. See the note on ExportedFunction interface")

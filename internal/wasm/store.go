@@ -427,6 +427,14 @@ func (m *ModuleInstance) resolveImports(ctx context.Context, module *Module) (er
 		var importedModule *ModuleInstance
 		if resolveImport != nil {
 			if v := resolveImport(moduleName); v != nil {
+				// botify: host modules come wrapped (hostModuleInstance).
+				for {
+					u, ok := v.(interface{ UnwrapModule() api.Module })
+					if !ok {
+						break
+					}
+					v = u.UnwrapModule()
+				}
 				importedModule = v.(*ModuleInstance)
 			}
 		}
