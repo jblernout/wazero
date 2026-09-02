@@ -79,6 +79,16 @@ func (m *Module) buildFunctionDefinitionsOnce() {
 		def.goFunc = code.GoFunc
 	}
 
+	// botify: export names indexed once (the per-definition scan of the
+	// export section was O(functions × exports): 200k × 340 for WebKit).
+	exportNames := map[Index][]string{}
+	for i := range m.ExportSection {
+		e := &m.ExportSection[i]
+		if e.Type == ExternTypeFunc {
+			exportNames[e.Index] = append(exportNames[e.Index], e.Name)
+		}
+	}
+
 	n, nLen := 0, len(functionNames)
 	for i := range m.FunctionDefinitionSection {
 		d := &m.FunctionDefinitionSection[i]
@@ -102,12 +112,7 @@ func (m *Module) buildFunctionDefinitionsOnce() {
 		d.paramNames = paramNames(localNames, funcIdx, len(d.Functype.Params))
 		d.resultNames = paramNames(resultNames, funcIdx, len(d.Functype.Results))
 
-		for i := range m.ExportSection {
-			e := &m.ExportSection[i]
-			if e.Type == ExternTypeFunc && e.Index == funcIdx {
-				d.exportNames = append(d.exportNames, e.Name)
-			}
-		}
+		d.exportNames = exportNames[funcIdx]
 	}
 }
 
