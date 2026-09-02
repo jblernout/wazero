@@ -185,6 +185,7 @@ func NewRuntimeWithConfig(ctx context.Context, rConfig RuntimeConfig) Runtime {
 		memoryLimitPages:      config.memoryLimitPages,
 		memoryCapacityFromMax: config.memoryCapacityFromMax,
 		dwarfDisabled:         config.dwarfDisabled,
+		namesDisabled:         config.namesDisabled,
 		storeCustomSections:   config.storeCustomSections,
 		ensureTermination:     config.ensureTermination,
 	}
@@ -198,6 +199,7 @@ type runtime struct {
 	memoryLimitPages      uint32
 	memoryCapacityFromMax bool
 	dwarfDisabled         bool
+	namesDisabled         bool
 	storeCustomSections   bool
 
 	// closed is the pointer used both to guard moduleEngine.CloseWithExitCode and to store the exit code.
@@ -232,7 +234,7 @@ func (r *runtime) CompileModule(ctx context.Context, binary []byte) (CompiledMod
 	}
 
 	internal, err := binaryformat.DecodeModule(binary, r.enabledFeatures,
-		r.memoryLimitPages, r.memoryCapacityFromMax, !r.dwarfDisabled, r.storeCustomSections)
+		r.memoryLimitPages, r.memoryCapacityFromMax, !r.dwarfDisabled, r.storeCustomSections, !r.namesDisabled)
 	if err != nil {
 		return nil, err
 	}

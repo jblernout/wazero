@@ -112,6 +112,13 @@ type RuntimeConfig interface {
 	// optimization flags passed to the compiler.
 	WithDebugInfoEnabled(bool) RuntimeConfig
 
+	// WithNameSectionEnabled toggles decoding of the custom "name" section
+	// (function names for stack traces, FunctionDefinition.DebugName and
+	// listeners). Enabled by default; disabling it saves the decoded names
+	// (tens of MB for a large module built with a full name section) and
+	// their decoding time.
+	WithNameSectionEnabled(bool) RuntimeConfig
+
 	// WithCompilationCache configures how runtime caches the compiled modules. In the default configuration, compilation results are
 	// only in-memory until Runtime.Close is closed, and not shareable by multiple Runtime.
 	//
@@ -186,6 +193,7 @@ type runtimeConfig struct {
 	memoryCapacityFromMax bool
 	engineKind            engineKind
 	dwarfDisabled         bool // negative as defaults to enabled
+	namesDisabled         bool // negative as defaults to enabled
 	newEngine             newEngine
 	cache                 CompilationCache
 	storeCustomSections   bool
@@ -294,6 +302,13 @@ func (c *runtimeConfig) WithMemoryCapacityFromMax(memoryCapacityFromMax bool) Ru
 func (c *runtimeConfig) WithDebugInfoEnabled(dwarfEnabled bool) RuntimeConfig {
 	ret := c.clone()
 	ret.dwarfDisabled = !dwarfEnabled
+	return ret
+}
+
+// WithNameSectionEnabled implements RuntimeConfig.WithNameSectionEnabled
+func (c *runtimeConfig) WithNameSectionEnabled(enabled bool) RuntimeConfig {
+	ret := c.clone()
+	ret.namesDisabled = !enabled
 	return ret
 }
 

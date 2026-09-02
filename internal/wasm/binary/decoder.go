@@ -21,7 +21,7 @@ func DecodeModule(
 	enabledFeatures api.CoreFeatures,
 	memoryLimitPages uint32,
 	memoryCapacityFromMax,
-	dwarfEnabled, storeCustomSections bool,
+	dwarfEnabled, storeCustomSections, namesEnabled bool,
 ) (*wasm.Module, error) {
 	r := bytes.NewReader(binary)
 
@@ -108,8 +108,10 @@ func DecodeModule(
 						return nil, fmt.Errorf("failed to skip name[%s]: %w", name, err)
 					}
 				}
-			} else {
+			} else if namesEnabled {
 				m.NameSection, err = decodeNameSection(r, uint64(limit))
+			} else if _, err = io.CopyN(io.Discard, r, int64(limit)); err != nil {
+				return nil, fmt.Errorf("failed to skip name section: %w", err)
 			}
 		case wasm.SectionIDType:
 			m.TypeSection, err = decodeTypeSection(enabledFeatures, r)
